@@ -1,5 +1,16 @@
+# Created by https://www.gitignore.io/api/go,code
+
+### Code ###
+# Visual Studio Code - https://code.visualstudio.com/
+.settings/
+.vscode/
+tsconfig.json
+jsconfig.json
+
+### Go ###
 # Binaries for programs and plugins
 *.exe
+*.exe~
 *.dll
 *.so
 *.dylib
@@ -10,5 +21,16 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
-.glide/
+### Go Patch ###
+/vendor/
+/Godeps/
+
+
+# End of https://www.gitignore.io/api/go,code
+
+# forego
+Procfile
+.env
+
+# executable
+pump19-go
