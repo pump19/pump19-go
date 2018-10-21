@@ -5,4 +5,5 @@ It offers only a small subset of commands compared to the [python version](https
 
 ## Dependencies
 
-- [GoIRC Client Framework](https://github.com/fluffle/goirc)
+- [**GoIRC** Client Framework](https://github.com/fluffle/goirc)
+- [**pq** Postgres driver](https://github.com/lib/pq)
