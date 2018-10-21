@@ -62,7 +62,7 @@ func NewCommandHandler(triggers []string, dsn string) *CommandHandler {
 		ch.handleCodefall})
 
 	ch.commands = append(ch.commands, Command{
-		regexp.MustCompile(`^(?:mult(?:i(?:pl(?:y|es?)?)?)?️) (?:\$)?([0-9]+(?:\.[0-9]{1,2})?)$`),
+		regexp.MustCompile(`^(?:mult(?:i(?:pl(?:y|es?))?)?) (?:\$)?([0-9]+(?:\.[0-9]{1,2})?)$`),
 		ch.handleMultiples})
 
 	return ch
