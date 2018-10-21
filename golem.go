@@ -34,7 +34,7 @@ func FromConfig(cfg *Config) *Golem {
 			log.Println("Requesting capabilities...")
 			conn.Cap("REQ", "twitch.tv/tags")
 
-			log.Println("Joining channels...")
+			log.Println("Joining channels", cfg.irc.channels)
 			for _, channel := range cfg.irc.channels {
 				conn.Join(channel)
 			}
