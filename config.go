@@ -24,6 +24,8 @@ type CmdConfig struct {
 type Config struct {
 	irc IrcConfig
 	cmd CmdConfig
+
+	dsn string
 }
 
 type LoadError struct {
@@ -83,6 +85,14 @@ func LoadConfig() (*Config, error) {
 		cfg.cmd.triggers = strings.Split(triggerStr, "")
 	}
 	// CmdConfig }}}
+
+	// Database DSN {{{
+	if dsnStr, exists := os.LookupEnv("PUMP19_DSN"); !exists {
+		return nil, &LoadError{"PUMP19_DSN", "is not set"}
+	} else {
+		cfg.dsn = dsnStr
+	}
+	// Database DSN }}}
 
 	return &cfg, nil
 }

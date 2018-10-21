@@ -40,7 +40,12 @@ func FromConfig(cfg *Config) *Golem {
 			}
 		})
 
-	commandHandler := CommandHandler{cfg.cmd.triggers}
+	commandHandler := NewCommandHandler(cfg.cmd.triggers, cfg.dsn)
+	if commandHandler == nil {
+		log.Println("Failed to setup command handler")
+		return nil
+	}
+
 	client.HandleFunc(irc.PRIVMSG, commandHandler.HandleCommand)
 
 	return &Golem{conn: client}
