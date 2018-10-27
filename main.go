@@ -14,11 +14,11 @@ func main() {
 	}
 
 	log.Println("Building go-lem...")
-	golem := FromConfig(cfg)
+	golem := newGolem(cfg)
 	if golem == nil {
 		log.Fatalln("Failed to build go-lem")
 	}
 
 	log.Println("Starting go-lem...")
-	golem.Run()
+	golem.run()
 }

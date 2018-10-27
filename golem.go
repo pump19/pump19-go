@@ -18,7 +18,7 @@ type Golem struct {
 // FromConfig creates a new Golem instance from the provided Config.
 // A client connection will be configured with the provided server, user and channel information.
 // A command handler is registered for dispatching commands received as PRIVMSGs.
-func FromConfig(cfg *Config) *Golem {
+func newGolem(cfg *Config) *Golem {
 	ircCfg := irc.NewConfig(cfg.irc.nick)
 	ircCfg.SSL = true
 	ircCfg.SSLConfig = &tls.Config{ServerName: cfg.irc.host}
@@ -40,13 +40,14 @@ func FromConfig(cfg *Config) *Golem {
 			}
 		})
 
-	commandHandler := NewCommandHandler(cfg.cmd.triggers, cfg.dsn)
+	commandHandler := newCommandHandler(cfg.cmd.triggers, cfg.dsn, client)
 	if commandHandler == nil {
 		log.Println("Failed to setup command handler")
 		return nil
 	}
 
-	client.HandleFunc(irc.PRIVMSG, commandHandler.HandleCommand)
+	client.HandleFunc(irc.PRIVMSG, commandHandler.handleCommand)
+	client.HandleFunc(irc.JOIN, commandHandler.joinedChannel)
 
 	return &Golem{conn: client}
 }
@@ -54,7 +55,7 @@ func FromConfig(cfg *Config) *Golem {
 // Run a fully configured IRC golem.
 // The method blocks as long as the IRC connection remains established.
 // Both SIGINT and SIGTERM are handled and will terminate the IRC connection.
-func (g *Golem) Run() {
+func (g *Golem) run() {
 	quit := make(chan bool, 1)
 
 	g.conn.HandleFunc(irc.DISCONNECTED,

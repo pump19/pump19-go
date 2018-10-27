@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"regexp"
@@ -9,7 +8,6 @@ import (
 	"strings"
 
 	irc "github.com/fluffle/goirc/client"
-	_ "github.com/lib/pq"
 )
 
 const CODEFALL_URL = "https://pump19.eu/codefall"
@@ -33,29 +31,34 @@ func (cmd *Command) Run(context IrcData, raw string) bool {
 		return false
 	}
 
-	cmd.handler(context, parts[1:])
+	go cmd.handler(context, parts[1:])
+
 	return true
 }
 
 type CommandHandler struct {
-	triggers []string
-	database *sql.DB
+	triggers  []string
+	codefall  *Codefall
+	ircClient *irc.Conn
 
 	commands []Command
+	channels []string
 }
 
-func NewCommandHandler(triggers []string, dsn string) *CommandHandler {
-	database, err := sql.Open("postgres", dsn)
-	if err != nil {
-		log.Fatalln("Cannot open database", err)
-	} else if err = database.Ping(); err != nil {
-		log.Fatalln("Cannot open database", err)
+func newCommandHandler(triggers []string, dsn string, ircClient *irc.Conn) *CommandHandler {
+	codefall := newCodefall(dsn)
+	if codefall == nil {
+		log.Println("Failed to setup codefall handler")
+		return nil
 	}
 
 	ch := &CommandHandler{
-		triggers: triggers,
-		database: database,
+		triggers:  triggers,
+		codefall:  codefall,
+		ircClient: ircClient,
 	}
+
+	go codefall.listen(ch.announceCodefall)
 
 	ch.commands = append(ch.commands, Command{
 		regexp.MustCompile(`^(?:codefall)(?: ([123]))?$`),
@@ -81,49 +84,31 @@ func (ch *CommandHandler) checkTrigger(raw string) (bool, string) {
 	return false, ""
 }
 
+func (ch *CommandHandler) announceCodefall(code Code) {
+	if len(ch.channels) == 0 || !ch.ircClient.Connected() {
+		return
+	}
+
+	log.Println("Announcing codefall on", ch.channels)
+	codeMsg := fmt.Sprintf("Codefall | %v (%v) %v/%v", code.description, code.codeType, CODEFALL_URL, code.key)
+
+	for _, channel := range ch.channels {
+		go ch.ircClient.Privmsg(channel, codeMsg)
+	}
+}
+
 func (ch *CommandHandler) handleCodefall(context IrcData, args []string) {
 	limit, err := strconv.Atoi(args[0])
 	if err != nil || limit <= 0 || limit > 3 {
 		limit = 1
 	}
 
-	rows, err := ch.database.Query(`
-		SELECT description, code_type, key
-			FROM codefall_unclaimed
-			WHERE user_name = $1
-			ORDER BY random()
-			LIMIT $2`, context.source, limit)
-
-	type Code struct {
-		description string
-		codeType    string
-		key         string
-	}
-
-	var codes []Code
-
-	if err != nil {
-		log.Println("Could not query unclaimed codes", err)
-	} else {
-		for rows.Next() {
-			var code Code
-
-			err = rows.Scan(&code.description, &code.codeType, &code.key)
-
-			if err != nil {
-				log.Println("Failed to parse result line")
-				continue
-			}
-
-			codes = append(codes, code)
-		}
-	}
+	userName := context.source
+	codes := ch.codefall.getRandomEntries(userName, limit)
 
 	if len(codes) <= 0 {
 		noCodesMsg := fmt.Sprintf("Could not find any unclaimed codes. Visit %v to add new entries.", CODEFALL_URL)
-
 		context.conn.Privmsg(context.target, noCodesMsg)
-		return
 	}
 
 	var b strings.Builder
@@ -156,7 +141,7 @@ func (ch *CommandHandler) handleMultiples(context IrcData, args []string) {
 
 // HandleCommand checks PRIVMSG for commands and dispatches them if found.
 // It accepts only commands on joined channels.
-func (ch *CommandHandler) HandleCommand(conn *irc.Conn, line *irc.Line) {
+func (ch *CommandHandler) handleCommand(conn *irc.Conn, line *irc.Line) {
 	// we only care for public commands
 	if !line.Public() {
 		return
@@ -185,9 +170,18 @@ func (ch *CommandHandler) HandleCommand(conn *irc.Conn, line *irc.Line) {
 			continue
 		}
 
-		logline := fmt.Sprintf("Got command '%v' from %v in %v",
+		logLine := fmt.Sprintf("Got command '%v' from %v in %v",
 			command, name, channel)
 
-		log.Println(logline)
+		log.Println(logLine)
 	}
+}
+
+// JoinedChannel keeps track of JOIN messages (i.e. joined channels).
+// These are used for announcing certain events on all known channels.
+func (ch *CommandHandler) joinedChannel(conn *irc.Conn, line *irc.Line) {
+	channel := line.Target()
+	log.Println("Joined channel", channel)
+
+	ch.channels = append(ch.channels, channel)
 }
