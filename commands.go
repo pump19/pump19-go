@@ -183,5 +183,7 @@ func (ch *CommandHandler) joinedChannel(conn *irc.Conn, line *irc.Line) {
 	channel := line.Target()
 	log.Println("Joined channel", channel)
 
+	conn.Privmsg(channel, "I Am Just Clay, And I Listen")
+
 	ch.channels = append(ch.channels, channel)
 }
