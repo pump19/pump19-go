@@ -10,7 +10,9 @@ import (
 	irc "github.com/fluffle/goirc/client"
 )
 
+const BINGO_URL = "https://pump19.eu/bingo"
 const CODEFALL_URL = "https://pump19.eu/codefall"
+const HELP_URL = "https://pump19.eu/commands"
 
 type IrcData struct {
 	conn   *irc.Conn
@@ -67,6 +69,14 @@ func newCommandHandler(triggers []string, dsn string, ircClient *irc.Conn) *Comm
 	ch.commands = append(ch.commands, Command{
 		regexp.MustCompile(`^(?:mult(?:i(?:pl(?:y|es?))?)?) (?:\$)?([0-9]+(?:\.[0-9]{1,2})?)$`),
 		ch.handleMultiples})
+
+	ch.commands = append(ch.commands, Command{
+		regexp.MustCompile(`^(?:help)$`),
+		ch.handleHelp})
+
+	ch.commands = append(ch.commands, Command{
+		regexp.MustCompile(`^(?:bingo)$`),
+		ch.handleBingo})
 
 	return ch
 }
@@ -137,6 +147,16 @@ func (ch *CommandHandler) handleMultiples(context IrcData, args []string) {
 
 	multMsg := b.String()
 	context.conn.Privmsg(context.target, multMsg)
+}
+
+func (ch *CommandHandler) handleHelp(context IrcData, args []string) {
+	helpMsg := fmt.Sprintf("Pump19 is run by Twisted Pear. Check %v for a list of supported commands.", HELP_URL)
+	context.conn.Privmsg(context.target, helpMsg)
+}
+
+func (ch *CommandHandler) handleBingo(context IrcData, args []string) {
+	helpMsg := fmt.Sprintf("Check out %v for our interactive Trope Bingo cards.", BINGO_URL)
+	context.conn.Privmsg(context.target, helpMsg)
 }
 
 // HandleCommand checks PRIVMSG for commands and dispatches them if found.
