@@ -1,0 +1,11 @@
+[[constraint]]
+  name = "github.com/fluffle/goirc"
+  version = "1.0.3"
+
+[[constraint]]
+  name = "github.com/lib/pq"
+  version = "1.7.0"
+
+[prune]
+  go-tests = true
+  unused-packages = true
